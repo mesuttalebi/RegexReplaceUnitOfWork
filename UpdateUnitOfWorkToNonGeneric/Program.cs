@@ -3,6 +3,9 @@
 class Program
 {
     static bool aPressed = false;
+    static int matchCount = 0;
+    static int changedFileCount = 0;
+
     static void Main()
     {
         Console.WriteLine("Enter the target directory of files:");
@@ -11,7 +14,8 @@ class Program
         if (Directory.Exists(targetDirectory))
         {
             var option = string.Empty;
-            do
+
+            //do
             {
                 Console.WriteLine("Select what to do:");
                 Console.WriteLine("1. Process all files in the directory to remove TEntity from using(var x = new UnitOfWork<TEntity>()) and add to Repository");
@@ -32,6 +36,10 @@ class Program
                         }
 
                         Console.WriteLine("Processing completed.");
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"'{matchCount}' occurences replaced in ({changedFileCount}) files.");
+                        Console.ResetColor();
+
                         break;
                     case "2":
                         ProcessFileForCustomPattern(targetDirectory);
@@ -47,7 +55,8 @@ class Program
                         break;
                 }
                 
-            } while (option != "0");
+            }
+            //while (option != "0");
             
 
             
@@ -129,6 +138,8 @@ class Program
         // List to hold all changes that need to be made
         var changed = false;
 
+        matchCount += matches.Count;
+
         while (matches.Count > 0)
         {
             var match = matches[0];
@@ -167,6 +178,8 @@ class Program
 
         if (changed)
         {
+            changedFileCount++;
+            
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"Processed: {filePath}");
             Console.ResetColor();
