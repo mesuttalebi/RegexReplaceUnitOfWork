@@ -14,12 +14,14 @@ class Program
             do
             {
                 Console.WriteLine("Select what to do:");
-                Console.WriteLine("1. Process all files in the directory to remove using(var x = new UnitOfWork())");
+                Console.WriteLine("1. Process all files in the directory to remove TEntity from using(var x = new UnitOfWork<TEntity>()) and add to Repository");
                 Console.WriteLine("2. Process all files in the directory to replace any using block regex pattern with a new pattern");
                 Console.WriteLine("3. Create Dependency Binding Code for all files");
                 Console.WriteLine("0. Exit");
 
+                Console.ForegroundColor = ConsoleColor.Green;
                 option = Console.ReadLine();
+                Console.ResetColor();
 
                 switch (option)
                 {
@@ -98,11 +100,17 @@ class Program
         Console.WriteLine("Enter the regex pattern to search for:");
         Console.WriteLine(@"Example: var\s+(\w+)\s*=\s*new\s*UnitOfWork\s*\(\s*\)");
         Console.WriteLine(@"Not that using block will be automatically added: This will match 'using (var ... = new UnitOfWork()) {' ");
+
+        Console.ForegroundColor = ConsoleColor.Green;
         string pattern = Console.ReadLine();
+        Console.ResetColor();
 
         Console.WriteLine("Enter the new pattern to replace with:");
-        Console.WriteLine(@"Example: var $1 = _unitOfWork.GenericRepository<$2>();");
+        Console.WriteLine(@"Example: var $1 = _unitOfWork.Repository<$2>();");
+
+        Console.ForegroundColor = ConsoleColor.Green;
         string newPattern = Console.ReadLine();
+        Console.ResetColor();
 
         foreach (var file in Directory.GetFiles(targetDirectory, "*.cs", SearchOption.AllDirectories))
         {
@@ -115,7 +123,7 @@ class Program
         string fileContent = File.ReadAllText(filePath);
 
         // Regex to find the 'using (var ... = new UnitOfWork())' pattern
-        Regex usingRegex = new Regex(@"using\s*\(\s*var\s+(\w+)\s*=\s*new\s*UnitOfWork\s*\(\s*\)\s*\)\s*\{", RegexOptions.Compiled);
+        Regex usingRegex = new Regex(@"using\s*\(\s*var\s+(\w+)\s*\=\s*new\s*UnitOfWork<(\w+)>\(\s*\)\s*\)\s*\r\n\s*\{", RegexOptions.Compiled);
         var matches = usingRegex.Matches(fileContent);
 
         // List to hold all changes that need to be made
@@ -126,6 +134,7 @@ class Program
             var match = matches[0];
 
             string variableName = match.Groups[1].Value;
+            string tEntity = match.Groups[2].Value;
             int startIndex = match.Index;
             int endIndex = FindClosingBracketIndex(fileContent, startIndex + match.Length);
 
@@ -133,14 +142,15 @@ class Program
             {
                 // Replace all occurrences of the variable name within the block
                 string blockContent = fileContent.Substring(startIndex, endIndex - startIndex + 1);
-                blockContent = blockContent.Replace(variableName, "_unitOfWork");
 
-                // Remove the 'using' statement and the braces
-                blockContent = blockContent.Replace(match.Value.Replace(variableName, "_unitOfWork"), string.Empty);
+                blockContent = blockContent.Replace($"{variableName}.CommonRepository.", $"{variableName}.CommonRepository<{tEntity}>().");
+                
+                // Remove the TEntity in using line
+                blockContent = blockContent.Replace(match.Value, match.Value.Replace($"<{tEntity}>", ""));
 
-                var lastClosing = blockContent.LastIndexOf('}');
+                //var lastClosing = blockContent.LastIndexOf('}');
 
-                blockContent = blockContent.Substring(0, lastClosing);
+                //blockContent = blockContent.Substring(0, lastClosing);
 
                 // update file content.
                 fileContent = fileContent.Remove(startIndex, endIndex - startIndex + 1);
@@ -154,7 +164,9 @@ class Program
 
         if (changed)
         {
+            Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"Processed: {filePath}");
+            Console.ResetColor();
             File.WriteAllText(filePath, fileContent);
         }
     }
