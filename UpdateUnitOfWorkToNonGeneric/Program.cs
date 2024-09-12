@@ -143,8 +143,11 @@ class Program
                 // Replace all occurrences of the variable name within the block
                 string blockContent = fileContent.Substring(startIndex, endIndex - startIndex + 1);
 
-                blockContent = blockContent.Replace($"{variableName}.CommonRepository.", $"{variableName}.CommonRepository<{tEntity}>().");
+                blockContent = Regex.Replace(blockContent, $"{variableName}.CommonRepository(\\s*\\r*\\n*\\s*\\.)",
+                    $"{variableName}.CommonRepository<{tEntity}>()$1");
                 
+                blockContent = blockContent.Replace($"{variableName}.CommonRepository;", $"{variableName}.CommonRepository<{tEntity}>();");
+
                 // Remove the TEntity in using line
                 blockContent = blockContent.Replace(match.Value, match.Value.Replace($"<{tEntity}>", ""));
 
